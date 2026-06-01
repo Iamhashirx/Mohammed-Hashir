@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ALPHA | Intelligence OS</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; background: #000; color: #00f2ff; font-family: 'Rajdhani', sans-serif; overflow: hidden; }
+        #canvas-container { position: fixed; inset: 0; z-index: 1; }
+        main { position: relative; z-index: 10; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; padding: 2rem; pointer-events: none; }
+        .glass { background: rgba(0, 242, 255, 0.05); backdrop-filter: blur(15px); border: 1px solid rgba(0, 242, 255, 0.2); }
+        .pointer-auto { pointer-events: auto; }
+        #movie-intro { opacity: 0; transform: scale(0.5); transition: all 3s ease; }
+        .fade-in { opacity: 1 !important; transform: scale(1) !important; }
+    </style>
+</head>
+<body>
+
+    <div id="boot-screen" style="position: fixed; inset: 0; z-index: 100; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+        <h1 id="movie-intro" class="text-8xl font-black tracking-[0.2em] neon-text mb-10">HASHIR</h1>
+        <button onclick="startSystem()" class="glass px-12 py-4 text-xl tracking-[0.5em] pointer-auto cursor-pointer hover:bg-cyan-500/20">INITIALIZE ALPHA</button>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <main>
+        <div class="glass p-4 w-72 rounded-br-3xl pointer-auto">
+            <h2 class="text-xs uppercase opacity-70">Neural Link Active</h2>
+            <p id="status-text">Owner: Hashir</p>
+        </div>
+
+        <div id="ai-output" class="text-center text-2xl font-light neon-text max-w-3xl mx-auto italic">
+            "Systems operational. Awaiting your command, Hashir."
+        </div>
+
+        <div class="flex gap-2 justify-center pointer-auto">
+            <input type="text" id="cmd-input" placeholder="Type command / कुछ लिखें..." class="glass px-6 py-3 w-80 rounded-full outline-none text-white">
+            <button onclick="handleInput()" class="glass px-8 py-3 rounded-full hover:bg-cyan-500/20">SEND</button>
+            <button onclick="startVoice()" class="glass px-8 py-3 rounded-full hover:bg-cyan-500/20">🎤</button>
+        </div>
+    </main>
+
+    <script>
+        let scene, camera, renderer, particles;
+
+        // --- 1. ENHANCED VOICE FUNCTION (Female + Hindi/English support) ---
+        function speak(text) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            const voices = window.speechSynthesis.getVoices();
+            
+            // Prioritize Female Voices
+            const preferredVoice = voices.find(v => v.name.includes('Google') || v.name.includes('Female')) || voices[0];
+            utterance.voice = preferredVoice;
+            
+            // Detect Hindi or English
+            const isHindi = /[\u0900-\u097F]/.test(text);
+            utterance.lang = isHindi ? 'hi-IN' : 'en-US';
+            
+            utterance.rate = 1.1;
+            utterance.pitch = 1.0;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // --- 2. IDENTITY & BILINGUAL LOGIC ---
+        async function getAnswer(query) {
+            const q = query.toLowerCase();
+            
+            // Identity logic
+            if (q.includes("name") || q.includes("नाम")) return "My name is ALPHA. I am a female AI created by Mohammed Hashir, a programmer.";
+            if (q.includes("assalam") || q.includes("hello")) return "Assalam-o-Alaikum! मैं ALPHA हूँ, बताइए मैं आपकी कैसे मदद कर सकती हूँ?";
+            if (q.includes("owner") || q.includes("creator")) return "My creator is Mohammed Hashir.";
+
+            try {
+                // Fetching from Wikipedia
+                const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`);
+                const data = await res.json();
+                return data.extract || "I have scanned my archives but found no specific information.";
+            } catch(e) { return "System connection error."; }
+        }
+
+        async function handleInput() {
+            const inputField = document.getElementById('cmd-input');
+            const input = inputField.value;
+            if(!input) return;
+            
+            document.getElementById('ai-output').innerText = "Analyzing...";
+            inputField.value = ""; 
+            
+            const answer = await getAnswer(input);
+            document.getElementById('ai-output').innerText = answer;
+            speak(answer);
+        }
+
+        // --- 3. SYSTEM STARTUP ---
+        function initGalaxy() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+            const geo = new THREE.BufferGeometry();
+            const pos = new Float32Array(5000 * 3);
+            for(let i=0; i<15000; i++) pos[i] = (Math.random() - 0.5) * 15;
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            particles = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0x00f2ff, size: 0.02, transparent: true }));
+            scene.add(particles);
+            camera.position.z = 5;
+
+            function animate() {
+                requestAnimationFrame(animate);
+                particles.rotation.y += 0.002;
+                renderer.render(scene, camera);
+            }
+            animate();
+        }
+
+        function startSystem() {
+            document.getElementById('boot-screen').style.display = 'none';
+            document.getElementById('movie-intro').classList.add('fade-in');
+            initGalaxy();
+            speak("Assalam-o-Alaikum, Hashir. Systems are fully online. I am ALPHA, your female AI assistant.");
+        }
+
+        function startVoice() {
+            const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            rec.lang = 'hi-IN'; // Allows Hindi input
+            rec.onresult = (e) => {
+                document.getElementById('cmd-input').value = e.results[0][0].transcript;
+                handleInput();
+            };
+            rec.start();
+        }
+
+        document.getElementById("cmd-input").addEventListener("keypress", (e) => { if(e.key === "Enter") handleInput(); });
+    </script>
+</body>
+</html>
+
+<script>
+    // --- 1. THE PERFECT GIRL VOICE ---
+    function speak(text) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        // This logic forces the most realistic female voice available
+        const voices = window.speechSynthesis.getVoices();
+        const girlVoice = voices.find(v => 
+            v.name.includes("Google US English Female") || 
+            v.name.includes("Microsoft Zira") || 
+            v.name.includes("Female") || 
+            v.name.includes("Google")
+        ) || voices[0];
+        
+        utterance.voice = girlVoice;
+        utterance.rate = 1.0; 
+        utterance.pitch = 1.2; // Slightly higher pitch for a realistic female tone
+        
+        // Language detection
+        const isHindi = /[\u0900-\u097F]/.test(text);
+        utterance.lang = isHindi ? 'hi-IN' : 'en-US';
+        
+        window.speechSynthesis.speak(utterance);
+    }
+
+    // --- 2. ADVANCED INTELLIGENCE (Wikipedia & General Knowledge) ---
+    async function getAnswer(query) {
+        const q = query.toLowerCase();
+        
+        // Custom Identity Logic
+        if (q.includes("name") || q.includes("नाम")) return "My name is ALPHA. I am a female artificial intelligence created by Mohammed Hashir, who is a brilliant programmer.";
+        if (q.includes("assalam") || q.includes("hello")) return "Assalam-o-Alaikum! मैं ALPHA हूँ, बताइए मैं आपकी कैसे मदद कर सकती हूँ?";
+        if (q.includes("owner")) return "I was created by Mohammed Hashir.";
+
+        // Wikipedia API fetch
+        try {
+            // Using a broader Wikipedia search
+            const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`;
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            if (data.extract) {
+                return data.extract;
+            } else {
+                // If Wikipedia doesn't have it, provide a polite fallback
+                return "I am searching my neural archives for " + query + ". It seems like a topic I am still learning about.";
+            }
+        } catch(e) {
+            return "System connection error.";
+        }
+    }
+
+    async function handleInput() {
+        const inputField = document.getElementById('cmd-input');
+        const input = inputField.value;
+        if(!input) return;
+        
+        const output = document.getElementById('ai-output');
+        output.innerText = "Analyzing...";
+        inputField.value = ""; 
+        
+        const answer = await getAnswer(input);
+        output.innerText = answer;
+        
+        // Speak the answer with the female voice
+        speak(answer);
+    }
+
+    // --- 3. INITIALIZATION ---
+    function startSystem() {
+        document.getElementById('boot-screen').style.display = 'none';
+        document.getElementById('movie-intro').classList.add('fade-in');
+        initGalaxy();
+        speak("Assalam-o-Alaikum, Hashir. Systems are fully online. I am ALPHA, your female AI assistant.");
+    }
+</script>
